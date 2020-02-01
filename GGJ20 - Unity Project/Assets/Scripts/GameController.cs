@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 using UnityEngine;
 
 public class GameController : MonoBehaviour
@@ -10,16 +11,18 @@ public class GameController : MonoBehaviour
     public enum ActionType
     {
         Jump = 0,
+        Shoot,
         _Count
     };
 
+    [System.Serializable]
     public struct ActionInfo
     {
         public bool isUnlock;
         public bool isActivate;
     }
 
-    public ActionInfo[] actionInfos;
+    public ActionInfo[] actionInfos = new ActionInfo[(int)ActionType._Count];
 
     public bool IsUnlock(ActionType type)
     {
@@ -33,8 +36,6 @@ public class GameController : MonoBehaviour
 
     private void Awake()
     {
-        actionInfos = new ActionInfo[(int)ActionType._Count];
-
         if (instance == null)
         {
             instance = this;
@@ -44,5 +45,21 @@ public class GameController : MonoBehaviour
         {
             Destroy(gameObject);
         }
+    }
+
+    static public IEnumerator Respawn()
+    {
+        var operation = SceneManager.LoadSceneAsync(1);
+
+        operation.allowSceneActivation = false;
+        while (operation.progress < 0.9f)
+        {
+            Debug.Log(operation.progress);
+            yield return null;
+        }
+
+        // Set Checkpoint
+
+        operation.allowSceneActivation = true;
     }
 }
