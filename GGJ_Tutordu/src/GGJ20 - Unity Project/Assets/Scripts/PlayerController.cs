@@ -25,6 +25,7 @@ public class PlayerController : MonoBehaviour
     public float dashDuration = 1f;
     private float dashTimer = 1f;
     private Vector3 dashDirection;
+    float dashCooldown = 0.0f;
 
     [Header("Shoot")]
     public GameObject projectilePrefab;
@@ -43,6 +44,7 @@ public class PlayerController : MonoBehaviour
     private GameObject myLine = null;
     private GameObject hook;
     public Material lineMat;
+    public GameObject hookPref;
 
     // Other
     GameController gameController = null;
@@ -54,10 +56,20 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (!canMove) return;
+
         if (UpdateGrappling())
         {
             Move();
             Shoot();
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D other) {
+        if (grappleHitPoint is Vector3 _grappleHitPoint)
+        {
+            DestroyGrapple();
+            playerState = PlayerState.Idle;
         }
     }
 
@@ -81,8 +93,6 @@ public class PlayerController : MonoBehaviour
 
     private void Move()
     {
-        if (!canMove) return;
-
         if (playerState == PlayerState.Dash)
         {
             dashTimer -= Time.deltaTime;
@@ -93,6 +103,8 @@ public class PlayerController : MonoBehaviour
             {
                 dashTimer = 0.0f;
                 playerState = PlayerState.Idle;
+
+                dashCooldown = 0.5f;
             }
         }
         else
@@ -110,7 +122,7 @@ public class PlayerController : MonoBehaviour
             }
 
             if (GameController.instance.IsActivate(GameController.ActionType.Dash)
-                && playerState == PlayerState.Walk && Input.GetAxis("Jump") > 0)
+                && playerState == PlayerState.Walk && Input.GetAxis("Jump") > 0 && dashCooldown == 0f)
             {
                 playerState = PlayerState.Dash;
 
@@ -123,7 +135,7 @@ public class PlayerController : MonoBehaviour
             {
                 isGrapKeyDown = true;
                 var hit = Physics2D.Raycast(origin: transform.position, direction: lookDirection, distance: grappleDistance);
-                hook = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                hook = Instantiate(hookPref);
                 if (hit.collider != null)
                 {
                     DrawGrappleLine(transform.position, hit.point, Color.red);
@@ -137,6 +149,26 @@ public class PlayerController : MonoBehaviour
                     DrawGrappleLine(transform.position, endPoint, Color.red);
                     hook.transform.position = endPoint;
                     DestroyGrapple();
+                }
+
+                if (hook != null)
+                {
+                    Vector3 vectorToTarget = transform.position - hook.transform.position;
+                    float angle = Mathf.Atan2(vectorToTarget.y, vectorToTarget.x) * Mathf.Rad2Deg + 90;
+                    Quaternion q = Quaternion.AngleAxis(angle, Vector3.forward);
+                    hook.transform.rotation = q;
+                    //hook.transform.rotation = Quaternion.Slerp(transform.rotation, q, Time.deltaTime * speed);
+                    //hook.transform.eulerAngles = toPlayer;
+                }
+            }
+
+            if (dashCooldown > 0)
+            {
+                dashCooldown -= Time.deltaTime;
+                
+                if (dashCooldown <= 0)
+                {
+                    dashCooldown = 0f;
                 }
             }
 
@@ -182,6 +214,9 @@ public class PlayerController : MonoBehaviour
 
     private void DrawGrappleLine(Vector3 start, Vector3 end, Color color)
     {
+        start.z = 2;
+        end.z = 2;
+
         myLine = new GameObject();
         myLine.transform.position = start;
         myLine.AddComponent<LineRenderer>();
@@ -189,8 +224,9 @@ public class PlayerController : MonoBehaviour
         lr.material = lineMat;
         lr.startColor = color;
         lr.endColor = color;
-        lr.SetWidth(0.1f, 0.1f);
+        lr.SetWidth(0.5f, 0.5f);
         lr.SetPosition(0, start);
         lr.SetPosition(1, end);
+        lr.sortingOrder = 2;
     }
 }

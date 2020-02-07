@@ -31,10 +31,13 @@ public class EnemyController : MonoBehaviour
 
     public Collider2D collider;
 
+    Animator animator;
+
     private void Awake()
     {
         defaultPos = transform.position;
         jumpTimer = 0.0f;
+        animator = GetComponent<Animator>();
     }
 
     private void FixedUpdate()
@@ -76,6 +79,8 @@ public class EnemyController : MonoBehaviour
                     isCooldown = false;
                     isJump = true;
                     collider.enabled = false;
+                    animator.ResetTrigger("Wait");
+                    animator.SetTrigger("Jump");
                 }
             }
             else
@@ -88,6 +93,8 @@ public class EnemyController : MonoBehaviour
                     jumpTimer = jumpCooldown;
                     isCooldown = true;
                     collider.enabled = true;
+                    animator.ResetTrigger("Jump");
+                    animator.SetTrigger("Wait");
                 }
                 else if (jumpOffset >= jumpHeight)
                 {
